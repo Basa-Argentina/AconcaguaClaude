@@ -543,19 +543,15 @@ public class RemitoBussiness {
 
     private static void enviarConGMail(String destinatario, String asunto, StringBuilder cuerpo ,String destinatario1) throws Exception {
 
-        // Esto es lo que va delante de @gmail.com en tu cuenta de correo. Es el
-        // remitente tambiÃ©n.
-        String remitente = "pedidos@basaargentina.com.ar"; // Para la direcciÃ³n nomcuenta@gmail.com
-        String clave = "BcOpedidos+1asa..";
+        // Cuenta de Gmail (Google Workspace) usada para el envio
+        String remitente = "pedidos@basaargentina.com.ar";
+        String clave = "sjbjxxbwjxjorabb"; // Contrasena de aplicacion de Gmail
         Properties props = System.getProperties();
-        props.put("mail.smtp.host", "mail.basaargentina.com.ar"); // El servidor SMTP de Google
-        props.put("mail.smtp.user", remitente);
-        props.put("mail.smtp.clave", clave); // La clave de la cuenta
-        props.put("mail.smtp.auth", "true"); // Usar autenticaciÃ³n mediante usuario y clave
-      //  props.put("mail.smtp.starttls.enable", "true"); // Para conectar de manera segura al servidor SMTP
-        //props.put("mail.smtp.ssl.trust", "smtp.gmail.com"); // Fixed
-        props.put("mail.smtp.port", "26"); //
-        // El puerto SMTP seguro de Google
+        props.put("mail.smtp.host", "smtp.gmail.com");
+        props.put("mail.smtp.port", "587");
+        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.starttls.enable", "true");
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
 
         Session session = Session.getDefaultInstance(props);
         MimeMessage message = new MimeMessage(session);
@@ -585,7 +581,7 @@ public class RemitoBussiness {
             message.setContent(multipart ,"text/html");
 
             Transport transport = session.getTransport("smtp");
-            transport.connect("mail.basaargentina.com.ar", remitente, clave);
+            transport.connect("smtp.gmail.com", remitente, clave);
             transport.sendMessage(message, message.getAllRecipients());
             transport.close();
 

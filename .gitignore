@@ -11,8 +11,7 @@ target/
 src/main/resources/application.properties
 **/application.properties
 
-# Carpeta interna duplicada y configuración de Claude
-basa-asf/
+# Configuración local de Claude
 .claude/
 
 # Logs

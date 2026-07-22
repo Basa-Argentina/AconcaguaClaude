@@ -1,37 +1,61 @@
-app.controller('controlarRemitosCtrl', function ($scope, $http, $mdDialog, $element, $timeout) {
+app.controller('controlarRemitosCtrl', function ($scope, $http, $mdDialog, $element, $timeout, $interval) {
     const scope = $scope;
 
+    $scope.progresoProcesado = 0;
+    $scope.progresoTotal     = 0;
+    $scope.progresoPct       = 0;
+
+    // Polling de progreso cada 2 segundos mientras procesa
+    var pollingProgreso = $interval(function () {
+        $http.get('/operaciones/controlar_remitos/progreso').success(function (p) {
+            $scope.progresoProcesado = p.procesados;
+            $scope.progresoTotal     = p.total;
+            $scope.progresoPct       = p.total > 0 ? Math.round((p.procesados / p.total) * 100) : 0;
+        });
+    }, 2000);
+
     $http.get('/operaciones/controlar_remitos').success(function (data) {
+        $interval.cancel(pollingProgreso);
+        $scope.progresoPct = 100;
         const json = data;
         const reporte = new jsPDF('l', 'pt', 'A4');
-        let posicionY = 40; // Ajusta según sea necesario
-        let count = 0;
-        let currentPage = 1;
-        const itemsPerPage = 30; // Ajusta según sea necesario
+        // A4 landscape: 841 x 595 pts. Margen inferior en 575.
+        const pageHeight  = 575;
+        const lineHeight  = 12;
+        const xDetalle    = 150;
+        const maxAncho    = 841 - xDetalle - 15; // ancho disponible para el detalle
+        let posicionY = 40;
 
-        function addNewPageIfNeeded() {
-            if (count > 0 && count % itemsPerPage === 0) {
-                reporte.addPage();
-                currentPage++;
-                posicionY = 40; // Ajusta según sea necesario
-            }
+        function encabezado() {
+            reporte.setFontSize(14);
+            reporte.setTextColor(0, 0, 0);
+            reporte.setFontType('bold');
+            reporte.text("REPORTE CONTROL AUTOMATICO DE REMITOS", 250, 25);
+            reporte.line(16, 32, 820, 32);
         }
 
-        reporte.setFontSize(14);
-        reporte.setTextColor(0, 0, 0);
-        reporte.setFontType('bold');
-        reporte.text("REPORTE CONTROL AUTOMATICO DE REMITOS", 250, 25);
-        reporte.line(16, 32, 820, 32);
+        encabezado();
 
         json.forEach(detalle => {
-            addNewPageIfNeeded();
+            reporte.setFontSize(8);
+
+            // Cortar el mensaje al ancho disponible
+            var lineas = reporte.splitTextToSize(detalle.mensaje, maxAncho);
+            var altoEntrada = lineas.length * lineHeight;
+
+            // Nueva página si no entra
+            if (posicionY + altoEntrada > pageHeight) {
+                reporte.addPage();
+                posicionY = 40;
+                encabezado();
+            }
 
             if (detalle.mensaje.match("entregados") === null) {
                 reporte.setTextColor(255, 0, 0);
             } else {
                 reporte.setTextColor(0, 0, 0);
             }
-            reporte.setFontSize(8);
+
             reporte.setFontType('bold');
             reporte.text("Requerimiento: ", 15, posicionY);
             reporte.setFontType('normal');
@@ -39,10 +63,9 @@ app.controller('controlarRemitosCtrl', function ($scope, $http, $mdDialog, $elem
             reporte.setFontType('bold');
             reporte.text("Detalle: ", 115, posicionY);
             reporte.setFontType('normal');
-            reporte.text(detalle.mensaje, 150, posicionY);
+            reporte.text(lineas, xDetalle, posicionY);
 
-            posicionY += 15; // Ajusta según sea necesario
-            count++;
+            posicionY += altoEntrada + 3;
         });
 
         $timeout(function () {
@@ -65,6 +88,7 @@ app.controller('controlarRemitosCtrl', function ($scope, $http, $mdDialog, $elem
             URL.revokeObjectURL(url);
         });
     }).error(function () {
+        $interval.cancel(pollingProgreso);
         $mdDialog.cancel();
     });
 });

@@ -14,13 +14,15 @@
     </md-toolbar>
 
     <md-dialog-content>
-        <div layout-gt-sm="row" layout="column" style="align-items: center; clear: left; float: left; position: relative; left: 30%; height: 5vh;">
-            <h3> Procesando Remitos </h3>
+        <div layout-gt-sm="row" layout="column" style="align-items: center; clear: left; float: left; position: relative; left: 25%; height: 5vh;">
+            <h3>Procesando Remitos &nbsp; <span ng-show="progresoTotal > 0">{{progresoProcesado}} / {{progresoTotal}} &nbsp; ({{progresoPct}}%)</span></h3>
         </div>
-        <div layout-gt-sm="row" layout="column" style="align-items: center; clear: left; float: left; position: relative; left: 43%; height: 20vh;">
+        <div layout-gt-sm="row" layout="column" style="align-items: center; clear: left; float: left; position: relative; left: 43%; height: 15vh;">
             <md-progress-circular ng-disabled="!vm.activated" md-diameter="90"></md-progress-circular>
         </div>
-
+        <div layout-gt-sm="row" layout="column" style="clear: left; padding: 0 10%; height: 5vh;" ng-show="progresoTotal > 0">
+            <md-progress-linear md-mode="determinate" value="{{progresoPct}}" class="md-accent"></md-progress-linear>
+        </div>
     </md-dialog-content>
     </div>
 </md-dialog>

@@ -31,11 +31,15 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
 @Controller
 public class OperacionesController {
+
+    private static final AtomicInteger progresoTotal     = new AtomicInteger(0);
+    private static final AtomicInteger progresoProcesado = new AtomicInteger(0);
 
     @Autowired
     private OperacionesRepository operacionesRepository;
@@ -227,12 +231,23 @@ public class OperacionesController {
         operacionesRepository.save(operacion);
     }
 
+    @ResponseBody
+    @RequestMapping(value = "/operaciones/controlar_remitos/progreso", method = RequestMethod.GET)
+    public Map<String, Integer> getProgresoControlarRemitos() {
+        Map<String, Integer> progreso = new HashMap<>();
+        progreso.put("procesados", progresoProcesado.get());
+        progreso.put("total",      progresoTotal.get());
+        return progreso;
+    }
+
     @PreAuthorize("hasAuthority('2')")
     @ResponseBody
     @RequestMapping(value = "/operaciones/controlar_remitos", method = RequestMethod.GET)
     public String getControlarRemitos(@AuthenticationPrincipal Principal principal) throws Exception {
         // Lists every operation with id #17
         List<Operaciones> listaOperaciones = operacionesRepository.findControlarRemitos();
+        progresoTotal.set(listaOperaciones.size());
+        progresoProcesado.set(0);
         List<String> lecturasB = generarListas(lecturasRepository.findLectura(CAMION));
         List<String> lecturasC = new ArrayList<>();// = generarListas(lecturasRepository.findLectura(ENTRADA));
 
@@ -303,33 +318,33 @@ public class OperacionesController {
             }
             if (!lecturaAC.isEmpty()) {
                 obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaAC.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " sin salida");
+                obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaAC).toString() + " sin salida");
                 stackErrores.add(obj.toString());
             } else if (!lecturaABC.isEmpty())
                 if (tipo.equals(ENTRADA)) {
                     obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                    obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaABC.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " recibidos");
+                    obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaABC).toString() + " recibidos");
                     stackErrores.add(obj.toString());
                 } else {
                     obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                    obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaABC.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " en planta");
+                    obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaABC).toString() + " en planta");
                     stackErrores.add(obj.toString());
                 }
             else if (!lecturaAB.isEmpty()) {
                 if (tipo.equals(SALIDA)) {
                     obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                    obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaAB.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " entregados");
+                    obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaAB).toString() + " entregados");
                     stackErrores.add(obj.toString());
                     //                operacion.setTipoOperacion_id(operacion.getTipoOperaciones().getTipoOperacionSiguiente_id() == null ? operacion.getTipoOperacion_id() : operacion.getTipoOperaciones().getTipoOperacionSiguiente_id().toString());
 
                     if (!lecturasA.isEmpty()) {
                         obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                        obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturasA.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " no entregados");
+                        obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturasA).toString() + " no entregados");
                         stackErrores.add(obj.toString());
                     }
                 } else {
                     obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
-                    obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaAB.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " sin entrada");
+                    obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaAB).toString() + " sin entrada");
                     stackErrores.add(obj.toString());
                 }
        /*     } else if (!lecturasA.isEmpty()) {
@@ -340,16 +355,7 @@ public class OperacionesController {
             } else if (!lecturasA.isEmpty()) {
                 obj.put(REQUERIMIENTO, operacion.getRequerimiento().getNumero());
 
-                List<String> elementosResult = new ArrayList<>();
-
-                for (int i = 0; i < lecturasA.size(); i += 300) {
-                    List<String> batchIds = lecturasA.subList(i, Math.min(i + 300, lecturasA.size()));
-                    List<Long> intList = new ArrayList<>();
-                    for(String s : batchIds) intList.add(Long.parseLong(s));
-                    elementosResult.addAll(elementosRepository.findByElemId(intList));
-                }
-
-                obj.put(MENSAJE, ELEMENTOS + elementosResult.toString() + " Sin movimientos");
+                obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturasA).toString() + " Sin movimientos");
                 stackErrores.add(obj.toString());
             }
             if (lecturasA.isEmpty() && lecturaAC.isEmpty() &&
@@ -498,6 +504,8 @@ public class OperacionesController {
                 }
             }
 
+            progresoProcesado.incrementAndGet();
+
             if (it.hasNext()) {
                 lecturasB.addAll(lecturaCB);
                 lecturasC.addAll(lecturaCB);
@@ -506,17 +514,17 @@ public class OperacionesController {
         }
         if (!lecturasC.isEmpty()) {
             obj.put(REQUERIMIENTO, "");
-            obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturasC.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " Sin Lectura Camion");
+            obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturasC).toString() + " Sin Lectura Camion");
             stackErrores.add(obj.toString());
         }
         if (!lecturasB.isEmpty()) {
             obj.put(REQUERIMIENTO, "");
-            obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturasB.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " Sin Lectura Entrada");
+            obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturasB).toString() + " Sin Lectura Entrada");
             stackErrores.add(obj.toString());
         }
         if (!lecturaCB.isEmpty()) {
             obj.put(REQUERIMIENTO, "");
-            obj.put(MENSAJE, ELEMENTOS + elementosRepository.findByElemId(lecturaCB.stream().map(Long::parseLong).collect(Collectors.toList())).toString() + " Sin Requerimiento");
+            obj.put(MENSAJE, ELEMENTOS + findElemCodigos(lecturaCB).toString() + " Sin Requerimiento");
             stackErrores.add(obj.toString());
         }
 
@@ -528,6 +536,15 @@ public class OperacionesController {
     @RequestMapping(value = "/operaciones/{idReq}/conceptos", method = RequestMethod.GET)
     public List<RelacionReqConF> getConceptos(@AuthenticationPrincipal Principal principal, @PathVariable("idReq") Long idReq) {
         return relacionReqConRepository.findByReqId(idReq);
+    }
+
+    private List<String> findElemCodigos(List<String> ids) {
+        List<Long> longIds = ids.stream().map(Long::parseLong).collect(Collectors.toList());
+        List<String> result = new ArrayList<>();
+        for (List<Long> batch : Lists.partition(longIds, 2000)) {
+            result.addAll(elementosRepository.findByElemId(batch));
+        }
+        return result;
     }
 
     private List<String> generarListas(List<Lecturas> listEntrada) {

@@ -46,6 +46,8 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.collect.Lists;
+
 import static java.util.Arrays.asList;
 import static org.springframework.web.bind.annotation.RequestMethod.GET;
 import static org.springframework.web.bind.annotation.RequestMethod.POST;
@@ -926,11 +928,19 @@ public class SiguienteOperacionController {
         listAsunto.append("Por intermedio del presente le informamos la baja definitiva de elementos de la fecha " + formateador.format(current) + nuevalinea);
         listAsunto.append(nuevalinea);
 
-        listaMovimientos.stream().forEach(movimiento -> {
-            String elem = elementosRepository.findByIdString(Long.parseLong(movimiento.getElemento_id()));
+        List<Long> todosLosIds = listaMovimientos.stream()
+                .map(m -> Long.parseLong(m.getElemento_id()))
+                .collect(Collectors.toList());
+
+        List<String> todosCodigos = new ArrayList<>();
+        for (List<Long> batch : Lists.partition(todosLosIds, 2000)) {
+            todosCodigos.addAll(elementosRepository.findByElemId(batch));
+        }
+
+        for (String elem : todosCodigos) {
             listAsunto1.append("- " + elem + espacio + "<b>De Baja Definitiva</b> " + nuevalinea);
             listSum.add(elem);
-        });
+        }
 
         if (!listSum.isEmpty()) {
             listAsunto.append(listAsunto1 + nuevalinea);

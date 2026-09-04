@@ -27,6 +27,9 @@ public class ElementosLite {
     @Column(nullable = false)
     private String remitoBaja;
 
+    @Column
+    private String remitoVacias;
+
     public Long getId() {
         return id;
     }
@@ -51,5 +54,8 @@ public class ElementosLite {
         this.remitoBaja = remitoBaja;
     }
 
+    public void setRemitoVacias(String remitoVacias) {
+        this.remitoVacias = remitoVacias;
+    }
 
 }

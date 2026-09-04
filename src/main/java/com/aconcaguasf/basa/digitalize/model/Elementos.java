@@ -94,6 +94,9 @@ public class Elementos {
     @Column(nullable = false)
     private String UremitoCons;
 
+    @Column
+    private String remitoVacias;
+
     @ManyToOne
     @JoinColumn(name="tipoElemento_id", insertable=false, updatable=false)
     private TipoElemento tipoElemento;
@@ -371,6 +374,12 @@ public class Elementos {
         UremitoCons = uremitoCons;
     }
 
+    public String getRemitoVacias() {
+        return remitoVacias;
+    }
 
+    public void setRemitoVacias(String remitoVacias) {
+        this.remitoVacias = remitoVacias;
+    }
 
 }

@@ -267,11 +267,17 @@ public class OperacionesController {
             // gets every element from remitos found by idReq
             Long numRequerimiento = Long.parseLong(operacion.getRequerimiento().getNumero());
             List<Long> lecturasAl = remitosRepository.findElementosByReq("%" + numRequerimiento.toString());
-            List<String> lecturasA = Lists.transform(lecturasAl, Functions.toStringFunction());
+            List<String> lecturasA = new ArrayList<>(Lists.transform(lecturasAl, Functions.toStringFunction()));
 
             if (operacion.getRequerimiento().getTipoRequerimiento().getTipoMovimiento().equals("ingreso")) {
                 tipo  = "1" ;
             } else tipo = SALIDA;
+
+            // Reiniciar listas de intersección para esta operación
+            lecturaAB.clear();
+            lecturaAC.clear();
+            lecturaCB.clear();
+            lecturaABC.clear();
 
             // Match lists of elements, from remitos, truck lectures and Entry Lectures
             lecturaAB.addAll(lecturasA);
@@ -406,14 +412,17 @@ public class OperacionesController {
                                 currentUser.getId(),
                                 Const.ACCION_MS019ELE
                         );
-                        if (!operacion.getRequerimiento().getTipoRequerimiento_id().equals("23")) {
+                        String tipoReqId = operacion.getRequerimiento().getTipoRequerimiento_id();
+                        String remitoInfo = "REMITO ASP: " + operacion.getRequerimiento().getRemito().getNumeroSinPrefijo() + "#" +
+                                operacion.getRequerimiento().getRemito().getFechaEntrega()
+                                        .toLocalDate()
+                                        .format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) + " # "
+                                + operacion.getRequerimiento().getRemito().getEmpleadoSolicitante();
+                        if (tipoReqId.equals("1") || tipoReqId.equals("24")) {
+                            elementos.setRemitoVacias(remitoInfo);
+                        } else if (!tipoReqId.equals("23")) {
                             elementos.setEstado("En Consulta");
-                            elementos.setUremitoCons("REMITO ASP: " + operacion.getRequerimiento().getRemito().getNumeroSinPrefijo() + "#" +
-                                    operacion.getRequerimiento().getRemito().getFechaEntrega()
-                                            .toLocalDate()
-                                            .format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) +" # "
-                                    +  operacion.getRequerimiento().getRemito().getEmpleadoSolicitante()
-                            );
+                            elementos.setUremitoCons(remitoInfo);
                         }
                         if (!elementosContenidos.isEmpty()) {
                             elementosContenidos.forEach(c -> {
